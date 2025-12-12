@@ -16,6 +16,7 @@ export function EmailDashboard({ user }: { user: User }) {
   const [selectedEmailId, setSelectedEmailId] = useState<string | null>(null);
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isAdminModel, setAdminModel] = useState(false);
+  const [selectedEmailOwnerId, setSelectedEmailOwnerId] = useState<string | undefined>();
 
   useEffect(() => {
     if (isMobile && selectedEmailAddress) {
@@ -31,7 +32,10 @@ export function EmailDashboard({ user }: { user: User }) {
           isMobile && !isCollapsed ? "w-screen" : "",
         )}
         user={user}
-        onSelectEmail={setSelectedEmailAddress}
+        onSelectEmail={(emailAddress, ownerId) => {
+          setSelectedEmailAddress(emailAddress);
+          setSelectedEmailOwnerId(ownerId);
+        }}
         selectedEmailAddress={selectedEmailAddress}
         isCollapsed={isCollapsed}
         setIsCollapsed={setIsCollapsed}
@@ -44,6 +48,8 @@ export function EmailDashboard({ user }: { user: User }) {
         selectedEmailId={selectedEmailId}
         onSelectEmail={setSelectedEmailId}
         isAdminModel={isAdminModel}
+        currentUserId={user.id}
+        emailOwnerId={selectedEmailOwnerId}
       />
     </div>
   );

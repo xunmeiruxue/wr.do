@@ -1,35 +1,84 @@
 services:
+  # WR.DO 主应用服务
   app:
     image: ghcr.io/oiov/wr.do/wrdo:${TAG:-main}
     container_name: wrdo
     ports:
+      # 应用端口映射，主机端口:容器端口
       - "3000:3000"
     environment:
+      # 运行环境
       NODE_ENV: production
+      
+      # 数据库连接 (必填)
+      # 格式: postgres://用户名:密码@主机:端口/数据库名
       DATABASE_URL: ${DATABASE_URL}
+      
+      # 认证配置 (必填)
+      # NextAuth.js 密钥，用于加密 session 等敏感数据
       AUTH_SECRET: ${AUTH_SECRET:-your-auth-secret}
+      # 应用访问地址 (需与 NEXT_PUBLIC_APP_URL 一致)
       AUTH_URL: ${AUTH_URL}
+      # 应用公开访问地址
       NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL}
+      
+      # OAuth 认证提供商 (可选)
+      # Google OAuth
       GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
       GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET}
+      # GitHub OAuth
       GITHUB_ID: ${GITHUB_ID}
       GITHUB_SECRET: ${GITHUB_SECRET}
+      # LinuxDo OAuth
       LinuxDo_CLIENT_ID: ${LinuxDo_CLIENT_ID}
       LinuxDo_CLIENT_SECRET: ${LinuxDo_CLIENT_SECRET}
+      
+      # 通用 OAuth 2.0 / OIDC (可选)
+      # 支持 Authentik、Keycloak、Auth0 等第三方认证服务
+      AUTH_OAUTH_ID: ${AUTH_OAUTH_ID}
+      AUTH_OAUTH_SECRET: ${AUTH_OAUTH_SECRET}
+      AUTH_OAUTH_ISSUER: ${AUTH_OAUTH_ISSUER}
+      AUTH_OAUTH_NAME: ${AUTH_OAUTH_NAME:-OAuth}
+      
+      # 电子邮件服务 (可选)
+      # Resend 或 Brevo API 密钥 (二选一)
       RESEND_API_KEY: ${RESEND_API_KEY}
       BREVO_API_KEY: ${BREVO_API_KEY}
+      # 发件人邮箱和名称
       EMAIL_FROM: ${EMAIL_FROM}
       EMAIL_FROM_NAME: ${EMAIL_FROM_NAME}
+      
+      # Cloudflare R2 存储自定义域名 (可选)
       NEXT_PUBLIC_EMAIL_R2_DOMAIN: ${NEXT_PUBLIC_EMAIL_R2_DOMAIN}
+      
+      # 数据分析 (可选)
+      # Google Analytics ID
       NEXT_PUBLIC_GOOGLE_ID: ${NEXT_PUBLIC_GOOGLE_ID}
+      # Umami 统计脚本
+      NEXT_PUBLIC_UMAMI_SCRIPT: ${NEXT_PUBLIC_UMAMI_SCRIPT}
+      NEXT_PUBLIC_UMAMI_WEBSITE_ID: ${NEXT_PUBLIC_UMAMI_WEBSITE_ID}
+      
+      # 截图服务 API (可选)
       SCREENSHOTONE_BASE_URL: ${SCREENSHOTONE_BASE_URL}
+      
+      # GitHub API Token (可选)
+      # 用于获取 GitHub Stars 数量等信息
       GITHUB_TOKEN: ${GITHUB_TOKEN}
-      SKIP_DB_CHECK: ${SKIP_DB_CHECK}
-      SKIP_DB_MIGRATION: ${SKIP_DB_MIGRATION}
+      
+      # 数据库管理 (可选)
+      # 是否跳过数据库检查和迁移 (true/false)
+      # 首次部署建议设置为 false，后续可设为 true 加快启动速度
+      SKIP_DB_CHECK: ${SKIP_DB_CHECK:-false}
+      SKIP_DB_MIGRATION: ${SKIP_DB_MIGRATION:-false}
+      
+      # 支持邮箱 (可选)
+      NEXT_PUBLIC_SUPPORT_EMAIL: ${NEXT_PUBLIC_SUPPORT_EMAIL}
     networks:
       - wrdo-network
+    # 容器重启策略: 除非手动停止，否则总是重启
     restart: unless-stopped
 
+# Docker 网络配置
 networks:
   wrdo-network:
     driver: bridge

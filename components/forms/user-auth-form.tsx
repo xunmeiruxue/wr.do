@@ -47,6 +47,7 @@ export function UserAuthForm({ className, type, ...props }: UserAuthFormProps) {
   const [isGithubLoading, setIsGithubLoading] = React.useState<boolean>(false);
   const [isLinuxDoLoading, setIsLinuxDoLoading] =
     React.useState<boolean>(false);
+  const [isOAuthLoading, setIsOAuthLoading] = React.useState<boolean>(false);
   const [suffixWhiteList, setSuffixWhiteList] = React.useState<string[]>([]);
   const searchParams = useSearchParams();
 
@@ -281,7 +282,8 @@ export function UserAuthForm({ className, type, ...props }: UserAuthFormProps) {
 
       {(loginMethod["google"] ||
         loginMethod["github"] ||
-        loginMethod["linuxdo"]) &&
+        loginMethod["linuxdo"] ||
+        loginMethod["oauth"]) &&
         (loginMethod["resend"] || loginMethod["credentials"]) &&
         rendeSeparator()}
 
@@ -298,7 +300,8 @@ export function UserAuthForm({ className, type, ...props }: UserAuthFormProps) {
             isLoading ||
             isGoogleLoading ||
             isGithubLoading ||
-            isLinuxDoLoading
+            isLinuxDoLoading ||
+            isOAuthLoading
           }
         >
           {isGoogleLoading ? (
@@ -322,7 +325,8 @@ export function UserAuthForm({ className, type, ...props }: UserAuthFormProps) {
             isLoading ||
             isGithubLoading ||
             isGoogleLoading ||
-            isLinuxDoLoading
+            isLinuxDoLoading ||
+            isOAuthLoading
           }
         >
           {isGithubLoading ? (
@@ -346,7 +350,8 @@ export function UserAuthForm({ className, type, ...props }: UserAuthFormProps) {
             isLoading ||
             isGithubLoading ||
             isGoogleLoading ||
-            isLinuxDoLoading
+            isLinuxDoLoading ||
+            isOAuthLoading
           }
         >
           {isLinuxDoLoading ? (
@@ -359,6 +364,31 @@ export function UserAuthForm({ className, type, ...props }: UserAuthFormProps) {
             />
           )}{" "}
           LinuxDo
+        </Button>
+      )}
+      {loginMethod["oauth"] && (
+        <Button
+          type="button"
+          variant="outline"
+          onClick={() => {
+            setIsOAuthLoading(true);
+            signIn("oauth");
+          }}
+          disabled={
+            !loginMethod.registration ||
+            isLoading ||
+            isGithubLoading ||
+            isGoogleLoading ||
+            isLinuxDoLoading ||
+            isOAuthLoading
+          }
+        >
+          {isOAuthLoading ? (
+            <Icons.spinner className="mr-2 size-4 animate-spin" />
+          ) : (
+            <Icons.shieldCheck className="mr-2 size-4" />
+          )}{" "}
+          {loginMethod["oauthName"] || "OAuth"}
         </Button>
       )}
 

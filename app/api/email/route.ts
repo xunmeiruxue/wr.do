@@ -34,7 +34,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json(userEmails, { status: 200 });
   } catch (error) {
     console.error("Error fetching user emails:", error);
-    return NextResponse.json("Internal Server Error", { status: 500 });
+    return NextResponse.json("服务器内部错误", { status: 500 });
   }
 }
 
@@ -58,12 +58,15 @@ export async function POST(req: NextRequest) {
   const { emailAddress } = await req.json();
 
   if (!emailAddress) {
-    return NextResponse.json("Missing userId or emailAddress", { status: 400 });
+    return NextResponse.json("缺少邮箱地址参数", { status: 400 });
   }
 
   const prefix = emailAddress.split("@")[0];
-  if (reservedAddressSuffix.includes(prefix)) {
-    return NextResponse.json("Invalid email address", { status: 400 });
+  // 只有非管理员用户才检查保留地址
+  if (user.role !== "ADMIN" && reservedAddressSuffix.includes(prefix)) {
+    return NextResponse.json("此邮箱地址为系统保留，请选择其他地址", {
+      status: 400,
+    });
   }
 
   try {
@@ -72,14 +75,19 @@ export async function POST(req: NextRequest) {
   } catch (error) {
     // console.log("Error creating user email:", error);
     if (error.message === "Invalid userId") {
-      return NextResponse.json({ error: error.message }, { status: 400 });
+      return NextResponse.json({ error: "无效的用户ID" }, { status: 400 });
     }
-    if (error.code === "P2002") {
-      return NextResponse.json("Email address already exists", {
+    if (error.code === "P2002" || error.message === "邮箱地址已存在") {
+      return NextResponse.json("邮箱地址已存在", {
+        status: 409,
+      });
+    }
+    if (error.code === "EMAIL_DELETED_BY_OTHER") {
+      return NextResponse.json(error.message, {
         status: 409,
       });
     }
 
-    return NextResponse.json("Internal Server Error", { status: 500 });
+    return NextResponse.json("服务器内部错误", { status: 500 });
   }
 }

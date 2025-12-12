@@ -16,21 +16,30 @@ export async function GET(req: NextRequest) {
 
   if (!emailAddress) {
     return NextResponse.json(
-      { error: "Missing emailAddress parameter" },
+      { error: "缺少邮箱地址参数" },
       { status: 400 },
     );
   }
 
   try {
-    const emails = await getEmailsByEmailAddress(emailAddress, page, pageSize);
+    const emails = await getEmailsByEmailAddress(
+      emailAddress,
+      page,
+      pageSize,
+      user.id,
+      user.role === "ADMIN",
+    );
     return NextResponse.json(emails, { status: 200 });
   } catch (error) {
     console.error("Error fetching emails:", error);
-    if (error.message === "Email address not found or has been deleted") {
+    if (error.message === "邮箱地址不存在或已被删除") {
       return NextResponse.json({ error: error.message }, { status: 404 });
     }
+    if (error.message === "没有权限查看此邮箱") {
+      return NextResponse.json({ error: error.message }, { status: 403 });
+    }
     return NextResponse.json(
-      { error: "Internal Server Error" },
+      { error: "服务器内部错误" },
       { status: 500 },
     );
   }
@@ -43,14 +52,14 @@ export async function DELETE(req: NextRequest) {
 
     const { ids } = await req.json();
     if (!ids) {
-      return Response.json("ids is required", { status: 400 });
+      return Response.json("缺少邮件ID参数", { status: 400 });
     }
 
     await deleteEmailsByIds(ids);
 
-    return Response.json("success", { status: 200 });
+    return Response.json("删除成功", { status: 200 });
   } catch (error) {
     console.error("[Error]", error);
-    return Response.json(error.message || "Server error", { status: 500 });
+    return Response.json(error.message || "服务器错误", { status: 500 });
   }
 }

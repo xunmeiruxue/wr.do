@@ -1,55 +1,85 @@
 services:
+  # WR.DO 主应用服务
   app:
     image: ghcr.io/oiov/wr.do/wrdo:${TAG:-latest}
     container_name: wrdo
     ports:
+      # 应用端口映射
       - "3000:3000"
     environment:
+      # 运行环境
       NODE_ENV: production
+      
+      # 数据库连接 (使用内置 PostgreSQL)
       DATABASE_URL: postgres://postgres:postgres@postgres:5432/wrdo
+      
+      # 认证配置
       AUTH_SECRET: ${AUTH_SECRET:-your-auth-secret}
       NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL}
+      
+      # OAuth 认证提供商 (可选)
       GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
       GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET}
       GITHUB_ID: ${GITHUB_ID}
       GITHUB_SECRET: ${GITHUB_SECRET}
       LinuxDo_CLIENT_ID: ${LinuxDo_CLIENT_ID}
       LinuxDo_CLIENT_SECRET: ${LinuxDo_CLIENT_SECRET}
+      
+      # 通用 OAuth 2.0 / OIDC (可选)
+      # 支持 Authentik、Keycloak、Auth0 等
+      AUTH_OAUTH_ID: ${AUTH_OAUTH_ID}
+      AUTH_OAUTH_SECRET: ${AUTH_OAUTH_SECRET}
+      AUTH_OAUTH_ISSUER: ${AUTH_OAUTH_ISSUER}
+      AUTH_OAUTH_NAME: ${AUTH_OAUTH_NAME:-OAuth}
+      
+      # 电子邮件服务 (可选)
       RESEND_API_KEY: ${RESEND_API_KEY}
       BREVO_API_KEY: ${BREVO_API_KEY}
       EMAIL_FROM: ${EMAIL_FROM}
       EMAIL_FROM_NAME: ${EMAIL_FROM_NAME}
+      
+      # 其他配置
       NEXT_PUBLIC_EMAIL_R2_DOMAIN: ${NEXT_PUBLIC_EMAIL_R2_DOMAIN}
       NEXT_PUBLIC_GOOGLE_ID: ${NEXT_PUBLIC_GOOGLE_ID}
+      NEXT_PUBLIC_UMAMI_SCRIPT: ${NEXT_PUBLIC_UMAMI_SCRIPT}
+      NEXT_PUBLIC_UMAMI_WEBSITE_ID: ${NEXT_PUBLIC_UMAMI_WEBSITE_ID}
       SCREENSHOTONE_BASE_URL: ${SCREENSHOTONE_BASE_URL}
       GITHUB_TOKEN: ${GITHUB_TOKEN}
-      SKIP_DB_CHECK: ${SKIP_DB_CHECK}
-      SKIP_DB_MIGRATION: ${SKIP_DB_MIGRATION}
+      SKIP_DB_CHECK: ${SKIP_DB_CHECK:-false}
+      SKIP_DB_MIGRATION: ${SKIP_DB_MIGRATION:-false}
+      NEXT_PUBLIC_SUPPORT_EMAIL: ${NEXT_PUBLIC_SUPPORT_EMAIL}
+    # 等待数据库服务就绪
     depends_on:
       - postgres
     networks:
       - wrdo-network
     restart: unless-stopped
 
+  # PostgreSQL 数据库服务
   postgres:
     image: postgres:16-alpine
     container_name: postgres
     environment:
+      # 数据库配置
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=postgres
       - POSTGRES_DB=wrdo
     volumes:
+      # 数据持久化存储
       - postgres-data:/var/lib/postgresql/data
     ports:
+      # 数据库端口映射 (可选，用于外部访问)
       - "5432:5432"
     networks:
       - wrdo-network
     restart: unless-stopped
 
+# Docker 卷配置
 volumes:
   postgres-data:
     name: wrdo-postgres-data
 
+# Docker 网络配置
 networks:
   wrdo-network:
     driver: bridge

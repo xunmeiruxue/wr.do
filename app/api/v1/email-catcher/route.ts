@@ -21,6 +21,13 @@ export async function POST(req: Request) {
       "enable_email_forward",
       "email_forward_targets",
       "email_forward_white_list",
+      "enable_webhook_push",
+      "webhook_url",
+      "webhook_secret",
+      "webhook_method",
+      "webhook_headers",
+      "webhook_template",
+      "webhook_target_white_list",
     ]);
 
     // 处理邮件转发和保存
@@ -34,6 +41,17 @@ export async function POST(req: Request) {
       );
       if (shouldPush) {
         await sendToTelegram(data, configs);
+      }
+    }
+
+    // Webhook
+    if (configs.enable_webhook_push) {
+      const shouldPush = shouldPushToWebhook(
+        data,
+        configs.webhook_target_white_list,
+      );
+      if (shouldPush) {
+        await sendToWebhook(data, configs);
       }
     }
 
@@ -313,4 +331,138 @@ function formatEmailForTelegram(
   message += `*Content:* \n${truncatedContent}`;
 
   return message;
+}
+
+// Webhook 推送白名单检查
+function shouldPushToWebhook(
+  email: OriginalEmail,
+  whiteList: string,
+): boolean {
+  if (!whiteList || whiteList.trim() === "") {
+    return true;
+  }
+
+  const whiteListArray = whiteList
+    .split(",")
+    .map((email) => email.trim())
+    .filter((email) => email.length > 0);
+
+  return whiteListArray.includes(email.to);
+}
+
+// 发送到 Webhook
+async function sendToWebhook(email: OriginalEmail, configs: any) {
+  const {
+    webhook_url,
+    webhook_secret,
+    webhook_method,
+    webhook_headers,
+    webhook_template,
+  } = configs;
+
+  if (!webhook_url) {
+    console.error("Webhook URL not configured");
+    return;
+  }
+
+  try {
+    const payload = formatEmailForWebhook(email, webhook_template);
+
+    // 解析自定义请求头
+    let customHeaders: Record<string, string> = {};
+    try {
+      if (webhook_headers && webhook_headers.trim() !== "") {
+        customHeaders = JSON.parse(webhook_headers);
+      }
+    } catch (error) {
+      console.error("Failed to parse webhook_headers:", error);
+    }
+
+    // 构建请求头
+    const headers: Record<string, string> = {
+      "Content-Type": "application/json",
+      ...customHeaders,
+    };
+
+    // 如果配置了密钥，添加签名
+    if (webhook_secret && webhook_secret.trim() !== "") {
+      const { createHmac } = await import("crypto");
+      const hmac = createHmac("sha256", webhook_secret);
+      hmac.update(JSON.stringify(payload));
+      const signature = hmac.digest("hex");
+      headers["X-Webhook-Signature"] = signature;
+    }
+
+    const method = (webhook_method || "POST").toUpperCase();
+
+    const response = await fetch(webhook_url, {
+      method: method,
+      headers: headers,
+      body: JSON.stringify(payload),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error(
+        `Failed to send webhook: ${response.status} ${response.statusText}`,
+        errorText,
+      );
+    } else {
+      console.log(`Email successfully sent to webhook: ${webhook_url}`);
+    }
+  } catch (error) {
+    console.error("Error in sendToWebhook:", error);
+  }
+}
+
+// 格式化邮件内容为 Webhook payload（JSON 格式）
+function formatEmailForWebhook(
+  email: OriginalEmail,
+  template?: string,
+): any {
+  const fromInfo = email.fromName
+    ? `${email.fromName} <${email.from}>`
+    : email.from;
+
+  const defaultPayload = {
+    from: email.from,
+    fromName: email.fromName || "",
+    fromInfo: fromInfo,
+    to: email.to,
+    subject: email.subject || "No Subject",
+    text: email.text || "",
+    html: email.html || "",
+    date: email.date || "",
+    messageId: email.messageId || "",
+    replyTo: email.replyTo || "",
+    cc: email.cc || [],
+    headers: email.headers || [],
+    attachments: email.attachments || [],
+  };
+
+  // 如果有自定义模板，尝试解析并合并
+  if (template && template.trim() !== "") {
+    try {
+      const customTemplate = JSON.parse(template);
+      // 如果模板是字符串类型，进行变量替换
+      if (typeof customTemplate === "string") {
+        const replaced = customTemplate
+          .replace("{{from}}", email.from)
+          .replace("{{fromName}}", email.fromName || "")
+          .replace("{{fromInfo}}", fromInfo)
+          .replace("{{to}}", email.to)
+          .replace("{{subject}}", email.subject || "No Subject")
+          .replace("{{text}}", email.text || "")
+          .replace("{{html}}", email.html || "")
+          .replace("{{date}}", email.date || "");
+        return { message: replaced, ...defaultPayload };
+      }
+      // 如果模板是对象，与默认 payload 合并
+      return { ...defaultPayload, ...customTemplate };
+    } catch (error) {
+      console.error("Failed to parse webhook_template:", error);
+    }
+  }
+
+  return defaultPayload;
 }

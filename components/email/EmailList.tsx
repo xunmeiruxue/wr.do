@@ -5,7 +5,7 @@ import Link from "next/link";
 import { ForwardEmail } from "@prisma/client";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
-import useSWR from "swr";
+import useSWR, { useSWRConfig } from "swr";
 
 import { cn, fetcher, htmlToText } from "@/lib/utils";
 
@@ -23,6 +23,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "../ui/dropdown-menu";
+import { Modal } from "../ui/modal";
 import { Skeleton } from "../ui/skeleton";
 import { Switch } from "../ui/switch";
 import {
@@ -41,6 +42,8 @@ interface EmailListProps {
   onSelectEmail: (emailId: string | null) => void;
   className?: string;
   isAdminModel: boolean;
+  currentUserId?: string; // 当前登录用户ID
+  emailOwnerId?: string; // 邮箱所有者ID
 }
 
 export default function EmailList({
@@ -49,14 +52,19 @@ export default function EmailList({
   onSelectEmail,
   className,
   isAdminModel,
+  currentUserId,
+  emailOwnerId,
 }: EmailListProps) {
   const t = useTranslations("Email");
+  const { mutate: globalMutate } = useSWRConfig();
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isAutoRefresh, setIsAutoRefresh] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(15);
   const [selectedEmails, setSelectedEmails] = useState<string[]>([]);
   const [showMutiCheckBox, setShowMutiCheckBox] = useState(false);
+  // 标记已读确认Modal
+  const [showMarkReadConfirm, setShowMarkReadConfirm] = useState(false);
 
   const [isDeleting, startDeleteTransition] = useTransition();
 
@@ -95,10 +103,24 @@ export default function EmailList({
 
   const handleMarkSelectedAsRead = async () => {
     if (selectedEmails.length === 0) {
-      toast.error("Please select at least one email");
+      toast.error("请至少选择一封邮件");
       return;
     }
 
+    // 检查是否是其他用户的邮箱
+    const isOtherUserEmail = isAdminModel && emailOwnerId && currentUserId && emailOwnerId !== currentUserId;
+
+    if (isOtherUserEmail) {
+      // 显示确认Modal
+      setShowMarkReadConfirm(true);
+      return;
+    }
+
+    executeMarkAsRead();
+  };
+
+  // 执行标记已读操作
+  const executeMarkAsRead = async () => {
     try {
       const response = await fetch("/api/email/read", {
         method: "PUT",
@@ -109,13 +131,20 @@ export default function EmailList({
       if (response.ok) {
         setSelectedEmails([]);
         mutate();
+        toast.success("已标记为已读");
       } else {
         const errorData = await response.json();
-        toast.error(errorData.error || "Failed to mark emails as read");
+        toast.error(errorData.error || "标记失败");
       }
     } catch (error) {
-      toast.error("Error marking emails as read");
+      toast.error("标记失败");
     }
+  };
+
+  // 确认标记已读
+  const confirmMarkAsRead = () => {
+    setShowMarkReadConfirm(false);
+    executeMarkAsRead();
   };
 
   const handleSelectEmail = (emailId: string) => {
@@ -145,7 +174,12 @@ export default function EmailList({
   const handleEmailSelection = (emailId: string | null) => {
     if (emailId) {
       const selectedEmail = data?.list?.find((email) => email.id === emailId);
-      if (selectedEmail && !selectedEmail.readAt) {
+
+      // 检查是否是其他用户的邮箱
+      const isOtherUserEmail = isAdminModel && emailOwnerId && currentUserId && emailOwnerId !== currentUserId;
+
+      // 只有本人邮箱才自动标记已读，其他用户邮箱需要手动标记
+      if (selectedEmail && !selectedEmail.readAt && !isOtherUserEmail) {
         handleMarkAsRead(emailId);
       }
     }
@@ -284,7 +318,12 @@ export default function EmailList({
             <EmailDetail
               email={data?.list?.find((email) => email.id === selectedEmailId)}
               selectedEmailId={selectedEmailId}
-              onClose={() => onSelectEmail(null)}
+              onClose={() => {
+                onSelectEmail(null);
+                mutate(); // 刷新当前邮箱列表
+                // 刷新EmailSidebar的缓存（未读计数等）
+                globalMutate((key) => typeof key === 'string' && key.startsWith('/api/email?'));
+              }}
               onMarkAsRead={() => handleMarkAsRead(selectedEmailId)}
             />
           ) : (
@@ -358,6 +397,35 @@ export default function EmailList({
           pageSize={pageSize}
           setPageSize={setPageSize}
         />
+      )}
+
+      {/* 标记已读确认 Modal */}
+      {showMarkReadConfirm && (
+        <Modal showModal={showMarkReadConfirm} setShowModal={setShowMarkReadConfirm}>
+          <div className="p-6">
+            <h2 className="mb-4 text-lg font-semibold">确认操作</h2>
+            <p className="mb-6 text-sm text-neutral-600 dark:text-neutral-400">
+              您正在标记其他用户邮箱的邮件为已读。
+            </p>
+            <p className="mb-6 text-sm text-neutral-600 dark:text-neutral-400">
+              确定要继续吗？
+            </p>
+            <div className="flex justify-end gap-2">
+              <Button
+                variant="outline"
+                onClick={() => setShowMarkReadConfirm(false)}
+              >
+                取消
+              </Button>
+              <Button
+                variant="default"
+                onClick={confirmMarkAsRead}
+              >
+                确定
+              </Button>
+            </div>
+          </div>
+        </Modal>
       )}
     </div>
   );

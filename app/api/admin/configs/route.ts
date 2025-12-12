@@ -37,6 +37,14 @@ export async function GET(req: NextRequest) {
       "enable_email_forward",
       "email_forward_targets",
       "email_forward_white_list",
+      // Webhook push configs
+      "enable_webhook_push",
+      "webhook_url",
+      "webhook_secret",
+      "webhook_method",
+      "webhook_headers",
+      "webhook_template",
+      "webhook_target_white_list",
     ]);
 
     return Response.json(configs, { status: 200 });

@@ -24,7 +24,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    await markEmailAsRead(emailId, user.id);
+    await markEmailAsRead(emailId, user.id, user.role === "ADMIN");
     return NextResponse.json({
       success: true,
     });
@@ -55,7 +55,7 @@ export async function PUT(request: NextRequest) {
       );
     }
 
-    await markEmailsAsRead(emailIds, user.id);
+    await markEmailsAsRead(emailIds, user.id, user.role === "ADMIN");
     return NextResponse.json({
       success: true,
     });

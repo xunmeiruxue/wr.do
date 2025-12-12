@@ -24,7 +24,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Icons } from "@/components/shared/icons";
 import VersionNotifier from "@/components/shared/version-notifier";
 
-export default function AppConfigs({}: {}) {
+export default function AppConfigs({ }: {}) {
   const [isPending, startTransition] = useTransition();
   const [loginMethodCount, setLoginMethodCount] = useState(0);
 
@@ -42,6 +42,13 @@ export default function AppConfigs({}: {}) {
   const [tgChatId, setTgChatId] = useState("");
   const [tgTemplate, setTgTemplate] = useState("");
   const [tgWhiteList, setTgWhiteList] = useState("");
+  const [webhookUrl, setWebhookUrl] = useState("");
+  const [webhookSecret, setWebhookSecret] = useState("");
+  const [webhookMethod, setWebhookMethod] = useState("POST");
+  const [webhookHeaders, setWebhookHeaders] = useState("");
+  const [webhookTemplate, setWebhookTemplate] = useState("");
+  const [webhookWhiteList, setWebhookWhiteList] = useState("");
+  const [webhookEnabled, setWebhookEnabled] = useState(false);
 
   const t = useTranslations("Setting");
 
@@ -56,6 +63,13 @@ export default function AppConfigs({}: {}) {
       setTgWhiteList(configs?.tg_email_target_white_list);
       setForwardEmailTargets(configs?.email_forward_targets);
       setForwardEmailWhiteList(configs?.email_forward_white_list);
+      setWebhookUrl(configs?.webhook_url || "");
+      setWebhookSecret(configs?.webhook_secret || "");
+      setWebhookMethod(configs?.webhook_method || "POST");
+      setWebhookHeaders(configs?.webhook_headers || "");
+      setWebhookTemplate(configs?.webhook_template || "");
+      setWebhookWhiteList(configs?.webhook_target_white_list || "");
+      setWebhookEnabled(!!configs?.enable_webhook_push);
     }
 
     if (!isLoading) {
@@ -278,7 +292,7 @@ export default function AppConfigs({}: {}) {
                         disabled={
                           isPending ||
                           emailSuffix ===
-                            configs.email_registration_suffix_limit_white_list
+                          configs.email_registration_suffix_limit_white_list
                         }
                         onClick={() =>
                           handleChange(
@@ -433,7 +447,7 @@ export default function AppConfigs({}: {}) {
                         disabled={
                           isPending ||
                           forwardEmailWhiteList ===
-                            configs.email_forward_white_list
+                          configs.email_forward_white_list
                         }
                         onClick={() =>
                           handleChange(
@@ -553,7 +567,7 @@ export default function AppConfigs({}: {}) {
                         disabled={
                           isPending ||
                           forwardEmailWhiteList ===
-                            configs.email_forward_white_list
+                          configs.email_forward_white_list
                         }
                         onClick={() =>
                           handleChange(
@@ -789,6 +803,270 @@ export default function AppConfigs({}: {}) {
                           handleChange(
                             tgWhiteList,
                             "tg_email_target_white_list",
+                            "STRING",
+                          )
+                        }
+                      >
+                        {t("Save")}
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              </CollapsibleContent>
+            </Collapsible>
+
+            {/* Webhook */}
+            <Collapsible>
+              <CollapsibleTrigger className="flex w-full items-center justify-between space-x-2">
+                <div className="space-y-1 leading-none">
+                  <p className="flex items-center gap-2 font-medium">
+                    {t("Webhook Pusher")}
+                  </p>
+                  <p className="text-start text-xs text-muted-foreground">
+                    {t("Push message to custom webhook endpoint")}
+                  </p>
+                </div>
+                {configs && (
+                  <div
+                    className="ml-auto flex items-center gap-3"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    {configs.enable_webhook_push &&
+                      !configs.webhook_url && (
+                        <Badge variant="yellow">
+                          <Icons.warning className="mr-1 size-3" />{" "}
+                          {t("Need to configure")}
+                        </Badge>
+                      )}
+                    <Switch
+                      checked={webhookEnabled}
+                      onCheckedChange={(v) => {
+                        setWebhookEnabled(v);
+                        handleChange(v, "enable_webhook_push", "BOOLEAN");
+                      }}
+                    />
+                    <Icons.chevronDown className="size-4" />
+                  </div>
+                )}
+              </CollapsibleTrigger>
+              <CollapsibleContent className="mt-4 space-y-4 rounded-md border p-4 shadow-md">
+                <div className="flex flex-col items-start justify-start gap-3">
+                  <div className="space-y-1 leading-none">
+                    <p className="font-medium">{t("Webhook URL")}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {t(
+                        "Set webhook URL, Only works when Webhook pusher is enabled",
+                      )}
+                    </p>
+                  </div>
+                  {configs && (
+                    <div className="flex w-full items-start gap-2">
+                      <Input
+                        className="bg-white dark:bg-neutral-700"
+                        placeholder="https://your-webhook-endpoint.com/api/email"
+                        value={webhookUrl}
+                        disabled={!webhookEnabled}
+                        onChange={(e) => setWebhookUrl(e.target.value)}
+                      />
+                      <Button
+                        className="h-9 text-nowrap"
+                        disabled={
+                          isPending || webhookUrl === configs.webhook_url
+                        }
+                        onClick={() =>
+                          handleChange(webhookUrl, "webhook_url", "STRING")
+                        }
+                      >
+                        {t("Save")}
+                      </Button>
+                    </div>
+                  )}
+                </div>
+                <div className="flex flex-col items-start justify-start gap-3">
+                  <div className="space-y-1 leading-none">
+                    <p className="font-medium">{t("Webhook Secret")}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {t(
+                        "Set webhook signature secret (optional), will be used to sign the payload with HMAC-SHA256",
+                      )}
+                    </p>
+                  </div>
+                  {configs && (
+                    <div className="flex w-full items-start gap-2">
+                      <Input
+                        className="bg-white dark:bg-neutral-700"
+                        placeholder="Enter your webhook secret"
+                        type="password"
+                        value={webhookSecret}
+                        disabled={!webhookEnabled}
+                        onChange={(e) => setWebhookSecret(e.target.value)}
+                      />
+                      <Button
+                        className="h-9 text-nowrap"
+                        disabled={
+                          isPending || webhookSecret === configs.webhook_secret
+                        }
+                        onClick={() =>
+                          handleChange(
+                            webhookSecret,
+                            "webhook_secret",
+                            "STRING",
+                          )
+                        }
+                      >
+                        {t("Save")}
+                      </Button>
+                    </div>
+                  )}
+                </div>
+                <div className="flex flex-col items-start justify-start gap-3">
+                  <div className="space-y-1 leading-none">
+                    <p className="font-medium">{t("HTTP Method")}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {t("Set HTTP request method, POST or PUT")}
+                    </p>
+                  </div>
+                  {configs && (
+                    <div className="flex w-full items-start gap-2">
+                      <select
+                        className="flex h-9 w-full rounded-md border border-input bg-white px-3 py-1 text-sm shadow-sm transition-colors dark:bg-neutral-700"
+                        value={webhookMethod}
+                        disabled={!webhookEnabled}
+                        onChange={(e) => setWebhookMethod(e.target.value)}
+                      >
+                        <option value="POST">POST</option>
+                        <option value="PUT">PUT</option>
+                      </select>
+                      <Button
+                        className="h-9 text-nowrap"
+                        disabled={
+                          isPending || webhookMethod === configs.webhook_method
+                        }
+                        onClick={() =>
+                          handleChange(
+                            webhookMethod,
+                            "webhook_method",
+                            "STRING",
+                          )
+                        }
+                      >
+                        {t("Save")}
+                      </Button>
+                    </div>
+                  )}
+                </div>
+                <div className="flex flex-col items-start justify-start gap-3">
+                  <div className="space-y-1 leading-none">
+                    <p className="font-medium">
+                      {t("Custom HTTP Headers")}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {t(
+                        "Set custom HTTP headers in JSON format, such as: {\"Authorization\":\"Bearer xxx\"}",
+                      )}
+                    </p>
+                  </div>
+                  {configs && (
+                    <div className="flex w-full items-start gap-2">
+                      <Textarea
+                        className="h-16 max-h-32 min-h-9 resize-y bg-white font-mono text-xs dark:bg-neutral-700"
+                        placeholder='{"Authorization": "Bearer your-token"}'
+                        rows={3}
+                        value={webhookHeaders}
+                        disabled={!webhookEnabled}
+                        onChange={(e) => setWebhookHeaders(e.target.value)}
+                      />
+                      <Button
+                        className="h-9 text-nowrap"
+                        disabled={
+                          isPending ||
+                          webhookHeaders === configs.webhook_headers
+                        }
+                        onClick={() =>
+                          handleChange(
+                            webhookHeaders,
+                            "webhook_headers",
+                            "STRING",
+                          )
+                        }
+                      >
+                        {t("Save")}
+                      </Button>
+                    </div>
+                  )}
+                </div>
+                <div className="flex flex-col items-start justify-start gap-3">
+                  <div className="space-y-1 leading-none">
+                    <p className="font-medium">
+                      {t("Webhook Payload Template")}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {t(
+                        "Set webhook payload template in JSON format (optional)",
+                      )}
+                    </p>
+                  </div>
+                  {configs && (
+                    <div className="flex w-full items-start gap-2">
+                      <Textarea
+                        className="h-16 max-h-32 min-h-9 resize-y bg-white font-mono text-xs dark:bg-neutral-700"
+                        placeholder='Leave empty to use default format, or customize JSON payload'
+                        rows={5}
+                        value={webhookTemplate}
+                        disabled={!webhookEnabled}
+                        onChange={(e) => setWebhookTemplate(e.target.value)}
+                      />
+                      <Button
+                        className="h-9 text-nowrap"
+                        disabled={
+                          isPending ||
+                          webhookTemplate === configs.webhook_template
+                        }
+                        onClick={() =>
+                          handleChange(
+                            webhookTemplate,
+                            "webhook_template",
+                            "STRING",
+                          )
+                        }
+                      >
+                        {t("Save")}
+                      </Button>
+                    </div>
+                  )}
+                </div>
+                <div className="flex flex-col items-start justify-start gap-3">
+                  <div className="space-y-1 leading-none">
+                    <p className="font-medium">
+                      {t("Webhook Push Email White List")}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {t(
+                        "Set webhook push email white list, split by comma, if not set, will push all emails",
+                      )}
+                    </p>
+                  </div>
+                  {configs && (
+                    <div className="flex w-full items-start gap-2">
+                      <Textarea
+                        className="h-16 max-h-32 min-h-9 resize-y bg-white dark:bg-neutral-700"
+                        placeholder="example@wr.do,test@wr.do"
+                        rows={3}
+                        value={webhookWhiteList}
+                        disabled={!webhookEnabled}
+                        onChange={(e) => setWebhookWhiteList(e.target.value)}
+                      />
+                      <Button
+                        className="h-9 text-nowrap"
+                        disabled={
+                          isPending ||
+                          webhookWhiteList ===
+                          configs.webhook_target_white_list
+                        }
+                        onClick={() =>
+                          handleChange(
+                            webhookWhiteList,
+                            "webhook_target_white_list",
                             "STRING",
                           )
                         }

@@ -244,6 +244,36 @@ export async function createUserEmail(
     throw new Error("Invalid userId");
   }
 
+  // 检查是否存在已删除的邮箱
+  const existingEmail = await prisma.userEmail.findFirst({
+    where: { emailAddress },
+  });
+
+  if (existingEmail) {
+    // 如果已删除
+    if (existingEmail.deletedAt !== null) {
+      // 如果是原所有者，允许恢复
+      if (existingEmail.userId === userId) {
+        return prisma.userEmail.update({
+          where: { id: existingEmail.id },
+          data: {
+            deletedAt: null, // 恢复
+            updatedAt: new Date().toISOString(),
+          },
+        });
+      } else {
+        // 如果是其他人，提示联系管理员
+        throw {
+          code: "EMAIL_DELETED_BY_OTHER",
+          message: "此邮箱地址已被其他用户使用，请联系管理员处理",
+        };
+      }
+    }
+    // 如果未删除，提示已被使用
+    throw { code: "P2002", message: "邮箱地址已存在" };
+  }
+
+  // 不存在，创建新的
   return prisma.userEmail.create({
     data: {
       userId,
@@ -297,8 +327,31 @@ export async function deleteUserEmailByAddress(email: string) {
       data: { deletedAt: new Date() },
     });
   } else {
-    throw new Error("User email not found or already deleted");
+    throw new Error("邮箱不存在或已被删除");
   }
+}
+
+// 硬删除 UserEmail（管理员专用，彻底删除邮箱及所有邮件）
+export async function hardDeleteUserEmail(id: string) {
+  // 先查询邮箱
+  const userEmail = await prisma.userEmail.findUnique({
+    where: { id },
+    select: { emailAddress: true },
+  });
+
+  if (!userEmail) {
+    throw new Error("邮箱不存在");
+  }
+
+  // 先删除关联的所有邮件
+  await prisma.forwardEmail.deleteMany({
+    where: { to: userEmail.emailAddress },
+  });
+
+  // 再删除 UserEmail
+  await prisma.userEmail.delete({
+    where: { id },
+  });
 }
 
 // 通过 emailAddress 查询邮件列表
@@ -306,13 +359,24 @@ export async function getEmailsByEmailAddress(
   emailAddress: string,
   page: number,
   pageSize: number,
+  userId?: string, // 当前用户ID，用于权限验证
+  isAdmin?: boolean, // 是否为管理员
 ): Promise<{ list: ForwardEmail[]; total: number }> {
+  // 管理员可以查看任何状态的邮箱（包括软删除的），普通用户只能查看未删除的
   const userEmail = await prisma.userEmail.findUnique({
-    where: { emailAddress, deletedAt: null },
+    where: {
+      emailAddress,
+      ...(isAdmin ? {} : { deletedAt: null }) // 管理员不限制 deletedAt，普通用户只能查询未删除的
+    },
   });
 
   if (!userEmail) {
-    throw new Error("Email address not found");
+    throw new Error("邮箱地址不存在或已被删除");
+  }
+
+  // 权限检查：只有邮箱所有者或管理员可以查看
+  if (userId && !isAdmin && userEmail.userId !== userId) {
+    throw new Error("没有权限查看此邮箱");
   }
 
   const list = await prisma.forwardEmail.findMany({
@@ -336,17 +400,26 @@ export async function getEmailsByEmailAddress(
  * 将邮件标记为已读
  * @param emailId 需要标记为已读的邮件ID
  * @param userId 当前用户ID (用于权限验证)
+ * @param isAdmin 是否为管理员（管理员可以标记任何邮箱）
  * @returns 更新后的邮件信息
  */
-export async function markEmailAsRead(emailId: string, userId: string) {
+export async function markEmailAsRead(
+  emailId: string,
+  userId: string,
+  isAdmin?: boolean,
+) {
   try {
     // 首先查询邮件是否存在，并检查权限
     const email = await prisma.forwardEmail.findFirst({
       where: {
         id: emailId,
-        UserEmail: {
-          userId,
-        },
+        ...(isAdmin
+          ? {} // 管理员不检查所有者
+          : {
+            UserEmail: {
+              userId,
+            },
+          }),
         readAt: null,
       },
       include: {
@@ -381,17 +454,26 @@ export async function markEmailAsRead(emailId: string, userId: string) {
  * 批量将邮件标记为已读
  * @param emailIds 需要标记为已读的邮件ID数组
  * @param userId 当前用户ID (用于权限验证)
+ * @param isAdmin 是否为管理员（管理员可以标记任何邮箱）
  * @returns 更新的邮件数量
  */
-export async function markEmailsAsRead(emailIds: string[], userId: string) {
+export async function markEmailsAsRead(
+  emailIds: string[],
+  userId: string,
+  isAdmin?: boolean,
+) {
   try {
     // 验证所有邮件是否属于该用户
     const emails = await prisma.forwardEmail.findMany({
       where: {
         id: { in: emailIds },
-        UserEmail: {
-          userId: userId,
-        },
+        ...(isAdmin
+          ? {} // 管理员不检查所有者
+          : {
+            UserEmail: {
+              userId: userId,
+            },
+          }),
       },
     });
 

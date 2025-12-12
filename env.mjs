@@ -12,6 +12,11 @@ export const env = createEnv({
     GITHUB_SECRET: z.string().optional(),
     LinuxDo_CLIENT_ID: z.string().optional(),
     LinuxDo_CLIENT_SECRET: z.string().optional(),
+    // 通用 OAuth 2.0 / OIDC 配置 (支持 Authentik 等)
+    AUTH_OAUTH_ID: z.string().optional(),
+    AUTH_OAUTH_SECRET: z.string().optional(),
+    AUTH_OAUTH_ISSUER: z.string().optional(),
+    AUTH_OAUTH_NAME: z.string().optional(),
     DATABASE_URL: z.string().optional(),
     RESEND_API_KEY: z.string().optional(),
     BREVO_API_KEY: z.string().optional(),
@@ -47,5 +52,10 @@ export const env = createEnv({
     GITHUB_TOKEN: process.env.GITHUB_TOKEN,
     LinuxDo_CLIENT_ID: process.env.LinuxDo_CLIENT_ID,
     LinuxDo_CLIENT_SECRET: process.env.LinuxDo_CLIENT_SECRET,
+    // 通用 OAuth 2.0 / OIDC
+    AUTH_OAUTH_ID: process.env.AUTH_OAUTH_ID,
+    AUTH_OAUTH_SECRET: process.env.AUTH_OAUTH_SECRET,
+    AUTH_OAUTH_ISSUER: process.env.AUTH_OAUTH_ISSUER,
+    AUTH_OAUTH_NAME: process.env.AUTH_OAUTH_NAME,
   },
 });

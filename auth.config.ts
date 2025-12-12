@@ -34,6 +34,29 @@ const linuxDoProvider: any = {
   },
 };
 
+// 通用 OAuth 2.0 / OIDC Provider (支持 Authentik 等第三方认证服务)
+const genericOAuthProvider: any =
+  env.AUTH_OAUTH_ID && env.AUTH_OAUTH_SECRET && env.AUTH_OAUTH_ISSUER
+    ? {
+      id: "oauth",
+      name: env.AUTH_OAUTH_NAME || "OAuth",
+      type: "oidc",
+      clientId: env.AUTH_OAUTH_ID,
+      clientSecret: env.AUTH_OAUTH_SECRET,
+      issuer: env.AUTH_OAUTH_ISSUER,
+      checks: ["pkce", "state"],
+      profile(profile: any) {
+        console.log("Generic OAuth profile", profile);
+        return {
+          id: profile.sub,
+          name: profile.name || profile.preferred_username || profile.email,
+          email: profile.email,
+          image: profile.picture || profile.avatar_url,
+        };
+      },
+    }
+    : null;
+
 export default {
   providers: [
     Google({
@@ -66,6 +89,7 @@ export default {
     //   },
     // }),
     linuxDoProvider,
+    ...(genericOAuthProvider ? [genericOAuthProvider] : []),
     Credentials({
       name: "Credentials",
       credentials: {

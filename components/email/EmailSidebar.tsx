@@ -48,7 +48,7 @@ import { SendEmailModal } from "./SendEmailModal";
 
 interface EmailSidebarProps {
   user: User;
-  onSelectEmail: (emailAddress: string | null) => void;
+  onSelectEmail: (emailAddress: string | null, ownerId?: string) => void;
   selectedEmailAddress: string | null;
   className?: string;
   isCollapsed?: boolean;
@@ -81,6 +81,9 @@ export default function EmailSidebar({
   const [deleteInput, setDeleteInput] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [onlyUnread, setOnlyUnread] = useState(false);
+  // 其他用户邮箱删除确认Modal
+  const [showOtherUserConfirm, setShowOtherUserConfirm] = useState(false);
+  const [otherUserEmailInfo, setOtherUserEmailInfo] = useState<{ user: string; email: string } | null>(null);
 
   const [pageSize, setPageSize] = useState(15);
 
@@ -120,21 +123,18 @@ export default function EmailSidebar({
       emailDomains?.find((d) => d.domain_name === domainSuffix)
         ?.min_email_length ?? 1;
     if (!emailSuffix || emailSuffix.length < limit_len) {
-      toast.error(`Email address characters must be at least ${limit_len}`);
+      toast.error(t("Email address characters must be at least") + ` ${limit_len}`);
       return;
     }
     if (/[^a-zA-Z0-9_\-\.]/.test(emailSuffix)) {
-      toast.error("Invalid email address");
+      toast.error(t("Invalid email address"));
       return;
     }
     if (!domainSuffix) {
-      toast.error("Domain suffix cannot be empty");
+      toast.error(t("Domain suffix cannot be empty"));
       return;
     }
-    if (reservedAddressSuffix.includes(emailSuffix)) {
-      toast.error("Email address is reserved, please choose another one");
-      return;
-    }
+    // 移除前端保留地址检查，交给后端处理（后端会检查管理员权限）
 
     startTransition(async () => {
       if (isEdit) {
@@ -150,10 +150,11 @@ export default function EmailSidebar({
         if (res.ok) {
           mutate();
           setShowEmailModal(false);
-          toast.success("Email updated successfully");
+          toast.success(t("Email updated successfully"));
         } else {
-          toast.error("Failed to update email", {
-            description: await res.text(),
+          const errorText = await res.text();
+          toast.error(t("Failed to update email"), {
+            description: errorText,
           });
         }
         return;
@@ -168,15 +169,16 @@ export default function EmailSidebar({
           if (res.ok) {
             mutate();
             setShowEmailModal(false);
-            toast.success("Email created successfully");
+            toast.success(t("Email created successfully"));
           } else {
-            toast.error("Failed to create email", {
-              description: await res.text(),
+            const errorText = await res.text();
+            toast.error(t("Failed to create email"), {
+              description: errorText,
             });
           }
         } catch (error) {
           console.log("Error creating email:", error);
-          toast.error("Error creating email");
+          toast.error(t("Error creating email"));
         }
       }
     });
@@ -194,7 +196,16 @@ export default function EmailSidebar({
   const handleDeleteEmail = async (id: string) => {
     startTransition(async () => {
       try {
-        const res = await fetch(`/api/email/${id}`, {
+        // 检查是否是已删除邮箱，管理员删除已删除邮箱时使用硬删除
+        const targetEmail = userEmails.find((e) => e.id === id);
+        const isHardDelete =
+          targetEmail?.deletedAt && user.role === "ADMIN";
+
+        const url = isHardDelete
+          ? `/api/email/${id}?hard=true`
+          : `/api/email/${id}`;
+
+        const res = await fetch(url, {
           method: "DELETE",
         });
         if (res.ok) {
@@ -202,9 +213,12 @@ export default function EmailSidebar({
           setShowDeleteModal(false);
           setDeleteInput("");
           setEmailToDelete(null);
-          toast.success("Email deleted successfully");
+          toast.success(t("Email deleted successfully"));
         } else {
-          toast.error("Failed to delete email");
+          const errorText = await res.text();
+          toast.error(t("Failed to delete email"), {
+            description: errorText,
+          });
         }
       } catch (error) {
         console.log("Error deleting email:", error);
@@ -224,7 +238,17 @@ export default function EmailSidebar({
     if (deleteInput === expectedInput) {
       handleDeleteEmail(emailToDelete);
     } else {
-      toast.error("Input does not match. Please type correctly.");
+      toast.error(t("Input does not match. Please type correctly."));
+    }
+  };
+
+  // 确认删除其他用户邮箱
+  const confirmOtherUserDelete = () => {
+    setShowOtherUserConfirm(false);
+    setOtherUserEmailInfo(null);
+    //确认后，打开删除输入框
+    if (emailToDelete) {
+      setShowDeleteModal(true);
     }
   };
 
@@ -445,33 +469,47 @@ export default function EmailSidebar({
         {userEmails.map((email) => (
           <div
             key={email.id}
-            onClick={() => onSelectEmail(email.emailAddress)}
+            onClick={() => onSelectEmail(email.emailAddress, email.userId)}
             className={cn(
               `border-gray-5 group m-1 cursor-pointer bg-neutral-50 p-2 transition-colors hover:bg-neutral-100 dark:border-zinc-700 dark:bg-neutral-800 dark:hover:bg-neutral-900`,
               selectedEmailAddress === email.emailAddress
                 ? "bg-gray-100 dark:bg-neutral-900"
                 : "",
               isCollapsed ? "flex items-center justify-center" : "",
+              // 软删除邮箱的视觉标记
+              email.deletedAt ? "border-2 border-dashed border-red-400 bg-red-50/50 dark:border-red-600 dark:bg-red-950/30" : "",
             )}
           >
             <div
               className={cn(
-                "flex items-center justify-between gap-1 text-sm font-bold text-neutral-500 dark:text-zinc-400",
+                "flex flex-col gap-1.5",
                 isCollapsed
-                  ? "size-10 justify-center rounded-xl bg-neutral-400 text-center text-white dark:text-neutral-100"
+                  ? "size-10 items-center justify-center rounded-xl bg-neutral-400 text-center text-white dark:text-neutral-100"
                   : "",
                 selectedEmailAddress === email.emailAddress && isCollapsed
                   ? "bg-neutral-600"
                   : "",
               )}
             >
-              <span className="w-2/3 truncate" title={email.emailAddress}>
-                {isCollapsed
-                  ? email.emailAddress.slice(0, 1).toLocaleUpperCase()
-                  : email.emailAddress}
-              </span>
+              {/* 第一行：邮箱名 + Badge */}
+              <div className="flex w-full items-center gap-2">
+                <span className="flex-1 truncate text-sm font-bold text-neutral-500 dark:text-zinc-400" title={email.emailAddress}>
+                  {isCollapsed
+                    ? email.emailAddress.slice(0, 1).toLocaleUpperCase()
+                    : email.emailAddress}
+                </span>
+
+                {/* 软删除标记 Badge */}
+                {!isCollapsed && email.deletedAt && (
+                  <Badge variant="destructive" className="shrink-0 text-[10px] px-1.5 py-0.5">
+                    已删除
+                  </Badge>
+                )}
+              </div>
+
+              {/* 第二行：操作按钮 */}
               {!isCollapsed && (
-                <>
+                <div className="flex items-center gap-1 shrink-0">
                   <SendEmailModal
                     emailAddress={selectedEmailAddress}
                     onSuccess={mutate}
@@ -480,7 +518,7 @@ export default function EmailSidebar({
                         className={cn(
                           "size-5 rounded border p-1 text-primary",
                           !isMobile
-                            ? "hidden hover:bg-neutral-200 group-hover:ml-auto group-hover:inline"
+                            ? "hidden hover:bg-neutral-200 group-hover:inline"
                             : "",
                         )}
                       />
@@ -501,12 +539,30 @@ export default function EmailSidebar({
                       !isMobile
                         ? "hidden hover:bg-neutral-200 group-hover:inline"
                         : "",
-                      email.deletedAt ? "bg-gray-400" : "",
+                      email.deletedAt ? "bg-red-100" : "",
                     )}
                     onClick={() => {
-                      if (!email.deletedAt) {
+                      // 检查是否是其他用户的正常邮箱
+                      const isOtherUserActiveEmail =
+                        isAdminModel &&
+                        !email.deletedAt &&
+                        email.user &&
+                        email.user !== user.email;
+
+                      if (isOtherUserActiveEmail) {
+                        // 先显示确认Modal
+                        setOtherUserEmailInfo({
+                          user: email.user || "",
+                          email: email.emailAddress,
+                        });
                         setEmailToDelete(email.id);
-                        setShowDeleteModal(true);
+                        setShowOtherUserConfirm(true);
+                      } else {
+                        // 正常删除流程
+                        if (!email.deletedAt || (email.deletedAt && user.role === "ADMIN")) {
+                          setEmailToDelete(email.id);
+                          setShowDeleteModal(true);
+                        }
                       }
                     }}
                   />
@@ -518,7 +574,7 @@ export default function EmailSidebar({
                     )}
                     title="Copy email address"
                   />
-                </>
+                </div>
               )}
             </div>
             {!isCollapsed && (
@@ -695,13 +751,52 @@ export default function EmailSidebar({
                 disabled={
                   isPending ||
                   deleteInput !==
-                    `delete ${
-                      userEmails.find((e) => e.id === emailToDelete)
-                        ?.emailAddress
-                    }`
+                  `delete ${userEmails.find((e) => e.id === emailToDelete)
+                    ?.emailAddress
+                  }`
                 }
               >
                 {t("Confirm Delete")}
+              </Button>
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      {/* 其他用户邮箱删除确认 Modal */}
+      {showOtherUserConfirm && otherUserEmailInfo && (
+        <Modal showModal={showOtherUserConfirm} setShowModal={setShowOtherUserConfirm}>
+          <div className="p-6">
+            <h2 className="mb-4 text-lg font-semibold text-red-600">⚠️ 警告</h2>
+            <p className="mb-4 text-sm text-neutral-700 dark:text-neutral-300">
+              此邮箱正在被其他用户使用！
+            </p>
+            <div className="mb-4 rounded-lg bg-red-50 p-3 dark:bg-red-950/30">
+              <p className="text-sm">
+                <strong>用户:</strong> {otherUserEmailInfo.user}
+              </p>
+              <p className="text-sm">
+                <strong>邮箱:</strong> {otherUserEmailInfo.email}
+              </p>
+            </div>
+            <p className="mb-6 text-sm text-neutral-600 dark:text-neutral-400">
+              删除后该用户将无法再使用此邮箱。确定要删除吗？
+            </p>
+            <div className="flex justify-end gap-2">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setShowOtherUserConfirm(false);
+                  setOtherUserEmailInfo(null);
+                }}
+              >
+                {t("Cancel")}
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={confirmOtherUserDelete}
+              >
+                确定删除
               </Button>
             </div>
           </div>

@@ -16,7 +16,7 @@ export async function GET(req: NextRequest) {
   const user = await checkApiKey(custom_api_key);
   if (!user?.id) {
     return Response.json(
-      "Invalid API key. You can get your API key from https://wr.do/dashboard/settings.",
+      "无效的 API 密钥。您可以在 https://wr.do/dashboard/settings 获取 API 密钥。",
       { status: 401 },
     );
   }
@@ -34,21 +34,30 @@ export async function GET(req: NextRequest) {
 
   if (!emailAddress) {
     return NextResponse.json(
-      { error: "Missing emailAddress parameter" },
+      { error: "缺少邮箱地址参数" },
       { status: 400 },
     );
   }
 
   try {
-    const emails = await getEmailsByEmailAddress(emailAddress, page, pageSize);
+    const emails = await getEmailsByEmailAddress(
+      emailAddress,
+      page,
+      pageSize,
+      user.id,
+      false, // v1 API 不支持管理员模式，只能查看自己的邮箱
+    );
     return NextResponse.json(emails, { status: 200 });
   } catch (error) {
     console.error("Error fetching emails:", error);
-    if (error.message === "Email address not found") {
+    if (error.message === "邮箱地址不存在或已被删除") {
       return NextResponse.json({ error: error.message }, { status: 404 });
     }
+    if (error.message === "没有权限查看此邮箱") {
+      return NextResponse.json({ error: error.message }, { status: 403 });
+    }
     return NextResponse.json(
-      { error: "Internal Server Error" },
+      { error: "服务器内部错误" },
       { status: 500 },
     );
   }

@@ -17,6 +17,7 @@ export interface CloudStorageCredentials {
   access_key_id?: string;
   secret_access_key?: string;
   endpoint?: string;
+  force_path_style?: boolean;
   buckets: BucketItem[];
 }
 
@@ -25,6 +26,7 @@ export interface ClientStorageCredentials {
   platform?: string;
   channel?: string;
   provider_name?: string;
+  force_path_style?: boolean;
   buckets: BucketItem[];
 }
 
@@ -53,10 +55,12 @@ export function createS3Client(
   accessKeyId: string,
   secretAccessKey: string,
   region: string = "auto",
+  options?: { forcePathStyle?: boolean },
 ) {
   return new S3Client({
     region: region,
     endpoint: endpoint,
+    forcePathStyle: options?.forcePathStyle,
     credentials: {
       accessKeyId,
       secretAccessKey,

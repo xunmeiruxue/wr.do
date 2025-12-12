@@ -776,6 +776,8 @@
     "Access Key ID": "Access Key ID",
     "Secret Access Key": "Secret Access Key",
     "Enabled": "Enabled",
+    "Force Path Style": "Force Path Style",
+    "forcePathStyleTooltip": "If enabled, use path-style S3 URLs (https://endpoint/bucket/key) instead of virtual-host style (https://bucket.endpoint/key).",
     "Bucket": "Bucket",
     "Bucket Name": "Bucket Name",
     "Public Domain": "Public Domain",

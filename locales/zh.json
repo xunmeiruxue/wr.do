@@ -775,6 +775,8 @@
     "Access Key ID": "访问密钥 ID",
     "Secret Access Key": "机密访问密钥",
     "Enabled": "启用",
+    "Force Path Style": "强制 Path-Style",
+    "forcePathStyleTooltip": "开启后使用 Path-Style（https://endpoint/bucket/key），关闭则使用 Virtual-host（https://bucket.endpoint/key）。",
     "Bucket": "存储桶",
     "Bucket Name": "存储桶名称",
     "Public Domain": "公开域名或自定义域名",

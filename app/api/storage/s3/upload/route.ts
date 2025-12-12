@@ -98,6 +98,8 @@ export async function POST(request: NextRequest) {
       providerChannel.endpoint,
       providerChannel.access_key_id,
       providerChannel.secret_access_key,
+      bucketConfig?.region || "auto",
+      { forcePathStyle: providerChannel.force_path_style },
     );
 
     const signedUrls = await Promise.all(
@@ -175,6 +177,8 @@ export async function GET(request: NextRequest) {
       configs.s3_config_01.endpoint,
       configs.s3_config_01.access_key_id,
       configs.s3_config_01.secret_access_key,
+      buckets.find((b) => b.bucket === bucket)?.region || "auto",
+      { forcePathStyle: configs.s3_config_01.force_path_style },
     );
 
     const pre_url = await getSignedUrl(

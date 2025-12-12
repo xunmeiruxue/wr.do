@@ -110,6 +110,7 @@ export async function POST(request: NextRequest) {
         status: 400,
       });
     }
+    const bucketConfig = buckets.find((b) => b.bucket === bucket);
 
     const signedUrl = await getSignedUrlForDownload(
       key,
@@ -117,6 +118,8 @@ export async function POST(request: NextRequest) {
         providerChannel.endpoint,
         providerChannel.access_key_id,
         providerChannel.secret_access_key,
+        bucketConfig?.region || "auto",
+        { forcePathStyle: providerChannel.force_path_style },
       ),
       bucket,
     );
@@ -167,11 +170,14 @@ export async function DELETE(request: NextRequest) {
         status: 400,
       });
     }
+    const bucketConfig = buckets.find((b) => b.bucket === bucket);
 
     const R2 = createS3Client(
       providerChannel.endpoint,
       providerChannel.access_key_id,
       providerChannel.secret_access_key,
+      bucketConfig?.region || "auto",
+      { forcePathStyle: providerChannel.force_path_style },
     );
 
     for (const key of keys) {

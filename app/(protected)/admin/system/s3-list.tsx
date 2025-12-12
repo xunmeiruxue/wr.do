@@ -153,6 +153,7 @@ export default function S3Configs({}: {}) {
                   access_key_id: "",
                   secret_access_key: "",
                   endpoint: "",
+                  force_path_style: false,
                   enabled: true,
                   buckets: [
                     {
@@ -356,6 +357,38 @@ export default function S3Configs({}: {}) {
                                 return {
                                   ...c,
                                   enabled: e,
+                                };
+                              }
+                              return c;
+                            }),
+                          )
+                        }
+                      />
+                    </div>
+
+                    <div className="flex flex-col justify-center space-y-3">
+                      <div className="flex items-center gap-1">
+                        <Label>{t("Force Path Style")}</Label>
+                        <TooltipProvider>
+                          <Tooltip delayDuration={0}>
+                            <TooltipTrigger>
+                              <Icons.help className="size-4 text-muted-foreground" />
+                            </TooltipTrigger>
+                            <TooltipContent className="max-w-64 text-wrap">
+                              {t("forcePathStyleTooltip")}
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      </div>
+                      <Switch
+                        checked={Boolean(config.force_path_style)}
+                        onCheckedChange={(checked) =>
+                          setS3Configs(
+                            s3Configs.map((c, i) => {
+                              if (i === index) {
+                                return {
+                                  ...c,
+                                  force_path_style: checked,
                                 };
                               }
                               return c;

@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="https://likedo.vercel.app/_static/images/x-preview.png" alt="WR.DO" >
+  <!-- <img src="https://likedo.vercel.app/_static/images/x-preview.png" alt="WR.DO" > -->
   <h1>WR.DO</h1>
   <p>一站式域名服务平台，集成短链服务、临时邮箱、子域名管理、文件存储和开放API接口。</p>
   <p>
@@ -15,35 +15,17 @@
   <img alt="GitHub Issues or Pull Requests" src="https://img.shields.io/github/issues/oiov/wr.do?style=flat-square"> <br>
   <img alt="GitHub Actions Workflow Status" src="https://img.shields.io/github/actions/workflow/status/oiov/wr.do/docker-build-push.yml?style=flat-square">
 	<img src="https://img.shields.io/github/license/oiov/wr.do?style=flat-square" alt="MIT"/><br><br>
-  <img width="15" src="https://storage.wr.do/2025/11/20/561763627504_.pic.jpg" /> 免费体验 Sora AI 视频生成 👉 <a href="https://sora.hk/i/5KY5N1FL">点击注册</a>
+  <!-- <img width="15" src="https://storage.wr.do/2025/11/20/561763627504_.pic.jpg" /> 免费体验 Sora AI 视频生成 👉 <a href="https://sora.hk/i/5KY5N1FL">点击注册</a> -->
 </div>
 
-## 📢 重要通知：推出官方运营版 LikeDo
+<img align="center" width="50%" alt="og-banner" src="https://github.com/user-attachments/assets/b338bfca-71ed-447a-bde5-18e5677cb8dc" />
 
-经过一年的开源运营，WR.DO 已积累了稳定的用户基础和成熟的技术条件。**为了持续维护和提供更好的服务**，我们正式推出官方运营版 **LikeDo**。
+> 🌟 推荐 **Claude**、**OpenAI** 稳定 API 网关：[nbility.ai](https://nbility.ai//auth/register?aff=Dptp) ，支持 claude-fable-5、gpt-5.6-sol 等主流 AI Coding 大模型🥳
 
-### 🔄 版本说明
+## 版本说明
 
-- **开源版 WR.DO**：将继续维护，演示域名变更为 https://likedo.vercel.app
-- **官方运营版 LikeDo**：独立数据库运营，域名为 https://like.do
-
-### ✨ LikeDo 新增功能
-
-- **短链增强**：AI 智能补全短链信息、支持创建专属私有子域名
-- **邮箱升级**：AI 智能回复邮件、自动生成邮件模板、独立设置转发地址
-- 更完善的用户交互体验
-
-### 📦 数据迁移指南
-
-如果您在 WR.DO 创建过资源，请按以下步骤迁移：
-
-1. 在 [like.do](https://like.do) 注册账户
-2. 前往 [数据迁移页面](https://like.do/dashboard/migrate-wrdo) 填写历史数据信息
-3. 系统将自动迁移您的短链和邮箱账户（不包括收件箱历史数据）
-
-立即体验官方运营版 👉 [like.do](https://like.do)
-
-
+- 开源版 Demo：[likedo.vercel.app](https://likedo.vercel.app)
+- 运营版 LikeDo：[like.do](https://like.do) ，集成 [AI Agent](https://like.do/zh/docs/user-guide/ai-chat-assistant) 统一调度管理站内资源，内置[激励共创系统](https://like.do/zh/blog/introducing-co-creation-program)，点击使用[邀请码注册](https://like.do/auth/register?ref=DAR5HDV4) 。
 
 ## 截图预览
 
@@ -237,7 +219,7 @@ pnpm dev
 
 ## 社区群组
 
-- Discord: https://discord.gg/AHPQYuZu3m
+- Discord: https://uv.do/disc
 - 微信群：
 
 <img width="300" src="https://wr.do/group" />
@@ -268,6 +250,8 @@ pnpm dev
 ## 开源协议
 
 [MIT](/LICENSE.md)
+
+
 
 
 
